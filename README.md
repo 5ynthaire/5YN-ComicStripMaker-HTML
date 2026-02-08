@@ -1,3 +1,4 @@
+**Example Output**:
 ![Preview](assets/banner.png)
 # 5YN-ComicStripMaker-HTML
 
