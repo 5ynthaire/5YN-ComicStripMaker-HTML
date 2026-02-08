@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>5YN Comic Strip Maker v0.6</title>
+    <title>5YN Comic Strip Maker v0.7</title>
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Inconsolata&family=Roboto+Condensed&display=swap" rel="stylesheet">
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <style>
@@ -106,8 +106,25 @@
         .disclaimer {
             font-size: 13px;
             color: #666;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             line-height: 1.4;
+        }
+
+        .credits {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+
+        .credits a {
+            color: #5B6675;
+            text-decoration: none;
+        }
+
+        .credits a:hover {
+            color: #00D4FF;
+            text-decoration: underline;
         }
 
         #drop-zone {
@@ -197,10 +214,15 @@
 <body>
 
     <div id="controls">
-        <h1>5YN Comic Strip Maker v0.6</h1>
+        <h1>5YN Comic Strip Maker v0.7</h1>
+        
         <p class="disclaimer">
             All dropped PNG images are processed entirely locally in your browser. 
             No images or data are uploaded to any server or shared with third parties.
+        </p>
+        
+        <p class="credits">
+            <a href="https://github.com/5ynthaire/5YN-ComicStripMaker-HTML" target="_blank">GitHub repo</a> | <a href="https://github.com/5ynthaire" target="_blank">5ynthaire</a>
         </p>
 
         <div class="section">
@@ -230,8 +252,8 @@
                 Border: 
                 <div class="radio-group">
                     <label><input type="radio" name="border" value="0">0px</label>
-                    <label><input type="radio" name="border" value="1">1px</label>
-                    <label><input type="radio" name="border" value="2" checked>2px</label>
+                    <label><input type="radio" name="border" value="1" checked>1px</label>
+                    <label><input type="radio" name="border" value="2">2px</label>
                     <label><input type="radio" name="border" value="3">3px</label>
                     <label><input type="radio" name="border" id="border-custom-radio">Custom</label>
                     <input type="number" id="border-custom" min="0" max="10" value="1">px
