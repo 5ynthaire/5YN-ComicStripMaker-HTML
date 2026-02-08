@@ -1,6 +1,6 @@
 **Example Output**:
 ![Preview](assets/banner.png)
-# 5YN-ComicStripMaker-HTML
+# 5YN Comic Strip Maker
 
 A quick and dirty comic strip maker
 
