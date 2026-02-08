@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5YN Comic Strip Maker v0.6</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@700&family=Inconsolata&family=Roboto+Condensed&display=swap" rel="stylesheet">
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --gutter-width: 20px;
+            --border-width: 1px;
+            --border-color: #000000;
+            --gutter-bg: #ffffff;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            display: flex;
+            flex-direction: row;
+            min-height: 100vh;
+            background: #f0f0f0;
+        }
+
+        #controls {
+            width: 500px;
+            padding: 20px;
+            background: #ffffff;
+            overflow-y: auto;
+            border-right: 1px solid #ddd;
+        }
+
+        #preview-container {
+            flex: 1;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            background: #eaeaea;
+        }
+
+        #preview-wrapper {
+            max-height: 512px;
+            overflow: auto;
+            width: 100%;
+        }
+
+        #preview-table {
+            border-collapse: separate;
+            border-spacing: var(--gutter-width) 0;
+            background: var(--gutter-bg);
+            border: var(--border-width) solid var(--border-color);
+            width: 100%;
+        }
+
+        #preview-table td {
+            padding: var(--gutter-width) 0;
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        #preview-table img {
+            width: 100%;
+            height: auto;
+            display: block;
+            box-sizing: border-box;
+            border: var(--border-width) solid var(--border-color);
+        }
+
+        #preview-table .title-row td {
+            padding-bottom: calc(var(--gutter-width) / 2);
+        }
+
+        #preview-table .footer-row td {
+            padding-top: calc(var(--gutter-width) / 2);
+        }
+
+        .footer-content {
+            position: relative;
+            width: 100%;
+            text-align: center;
+        }
+
+        .footer-author {
+            display: inline-block;
+        }
+
+        .footer-date {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            white-space: nowrap;
+        }
+
+        h1 { font-size: 24px; margin-bottom: 10px; }
+        h2 { font-size: 18px; margin: 30px 0 10px; }
+
+        .section { margin-bottom: 30px; }
+
+        .disclaimer {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        #drop-zone {
+            border: 3px dashed #aaa;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f8f8;
+            margin-bottom: 20px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #thumbnails {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .thumb-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .thumb-wrapper img {
+            height: 120px;
+            width: auto;
+            object-fit: contain;
+            background: #000;
+            border: 1px solid #ccc;
+        }
+
+        .thumb-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(255,0,0,0.7);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            text-align: center;
+            cursor: pointer;
+            line-height: 20px;
+            font-size: 16px;
+            display: none;
+        }
+
+        .thumb-wrapper:hover .thumb-remove { display: block; }
+
+        .thumb-grip {
+            position: absolute;
+            left: 4px;
+            top: 4px;
+            cursor: move;
+            font-size: 16px;
+            opacity: 0.6;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="text"], input[type="number"] { width: 200px; padding: 5px; }
+
+        button { padding: 8px 16px; margin-top: 10px; cursor: pointer; }
+
+        #export-btn { background: #00d4ff; color: white; border: none; font-weight: bold; }
+
+        #add-btn, #clear-btn { margin-right: 10px; }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; }
+            #controls { width: 100%; border-right: none; border-bottom: 1px solid #ddd; }
+            #preview-container { position: static; height: auto; }
+            #preview-wrapper { max-height: 256px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <h1>5YN Comic Strip Maker v0.6</h1>
+        <p class="disclaimer">
+            All dropped PNG images are processed entirely locally in your browser. 
+            No images or data are uploaded to any server or shared with third parties.
+        </p>
+
+        <div class="section">
+            <h2>Panel Selection</h2>
+            <button id="add-btn">Add Panels</button>
+            <button id="clear-btn">Clear All</button>
+            <div id="drop-zone">Drag PNGs here or click Add Panels</div>
+            <div id="thumbnails"></div>
+        </div>
+
+        <div class="section">
+            <h2>Framing</h2>
+            <div>
+                Gutter: 
+                <div class="radio-group">
+                    <label><input type="radio" name="gutter" value="10">10px</label>
+                    <label><input type="radio" name="gutter" value="20" checked>20px</label>
+                    <label><input type="radio" name="gutter" value="30">30px</label>
+                    <label><input type="radio" name="gutter" value="40">40px</label>
+                    <label><input type="radio" name="gutter" value="50">50px</label>
+                    <label><input type="radio" name="gutter" id="gutter-custom-radio">Custom</label>
+                    <input type="number" id="gutter-custom" min="0" max="60" value="20">px
+                    <input type="color" id="gutter-color" value="#ffffff">
+                </div>
+            </div>
+            <div style="margin-top:10px;">
+                Border: 
+                <div class="radio-group">
+                    <label><input type="radio" name="border" value="0">0px</label>
+                    <label><input type="radio" name="border" value="1">1px</label>
+                    <label><input type="radio" name="border" value="2" checked>2px</label>
+                    <label><input type="radio" name="border" value="3">3px</label>
+                    <label><input type="radio" name="border" id="border-custom-radio">Custom</label>
+                    <input type="number" id="border-custom" min="0" max="10" value="1">px
+                    <input type="color" id="border-color" value="#000000">
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Captioning</h2>
+            <div>
+                <label>Title: <input type="text" id="title-text" value="untitled strip"></label>
+                <div class="radio-group">
+                    <label><input type="radio" name="title-font" value="Oswald" checked>Oswald</label>
+                    <label><input type="radio" name="title-font" value="Inconsolata">Inconsolata</label>
+                    <label><input type="radio" name="title-font" value="Roboto Condensed">Roboto Condensed</label>
+                </div>
+                <label>Size (pt): <input type="number" id="title-size" value="32" min="10" max="100"></label>
+            </div>
+            <div style="margin-top:15px;">
+                <label>Author: <input type="text" id="author-text" value="author name"></label>
+                <div class="radio-group">
+                    <label><input type="radio" name="author-font" value="Oswald">Oswald</label>
+                    <label><input type="radio" name="author-font" value="Inconsolata" checked>Inconsolata</label>
+                    <label><input type="radio" name="author-font" value="Roboto Condensed">Roboto Condensed</label>
+                </div>
+                <label>Size (pt): <input type="number" id="author-size" value="20" min="10" max="60"></label>
+            </div>
+            <div style="margin-top:10px;">
+                Date: 
+                <label><input type="radio" name="date-toggle" value="yes" checked>Yes</label>
+                <label><input type="radio" name="date-toggle" value="no">No</label>
+                <input type="date" id="date-picker">
+            </div>
+        </div>
+
+        <div class="section">
+            <button id="export-btn">Export to PNG</button>
+        </div>
+    </div>
+
+    <div id="preview-container">
+        <div id="preview-wrapper">
+            <table id="preview-table"></table>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" multiple accept="image/png" style="display:none;">
+
+    <script>
+        const panels = [];
+        const thumbnails = document.getElementById('thumbnails');
+        const dropZone = document.getElementById('drop-zone');
+        const addBtn = document.getElementById('add-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const fileInput = document.getElementById('file-input');
+        const previewTable = document.getElementById('preview-table');
+        const previewWrapper = document.getElementById('preview-wrapper');
+
+        // Controls
+        const gutterRadios = document.querySelectorAll('input[name="gutter"]');
+        const gutterCustom = document.getElementById('gutter-custom');
+        const gutterCustomRadio = document.getElementById('gutter-custom-radio');
+        const gutterColor = document.getElementById('gutter-color');
+        const borderRadios = document.querySelectorAll('input[name="border"]');
+        const borderCustom = document.getElementById('border-custom');
+        const borderCustomRadio = document.getElementById('border-custom-radio');
+        const borderColor = document.getElementById('border-color');
+        const titleText = document.getElementById('title-text');
+        const titleFontRadios = document.querySelectorAll('input[name="title-font"]');
+        const titleSize = document.getElementById('title-size');
+        const authorText = document.getElementById('author-text');
+        const authorFontRadios = document.querySelectorAll('input[name="author-font"]');
+        const authorSize = document.getElementById('author-size');
+        const dateToggleYes = document.querySelector('input[name="date-toggle"][value="yes"]');
+        const datePicker = document.getElementById('date-picker');
+        const exportBtn = document.getElementById('export-btn');
+
+        let gutterWidth = 20;
+        let borderWidth = 1;
+
+        function updateCSSVars() {
+            document.documentElement.style.setProperty('--gutter-width', gutterWidth + 'px');
+            document.documentElement.style.setProperty('--border-width', borderWidth + 'px');
+            document.documentElement.style.setProperty('--border-color', borderColor.value);
+            document.documentElement.style.setProperty('--gutter-bg', gutterColor.value);
+        }
+
+        function updatePreview() {
+            previewTable.innerHTML = '';
+
+            if (panels.length === 0) {
+                const row = previewTable.insertRow();
+                const cell = row.insertCell();
+                cell.textContent = 'Add panels to begin';
+                cell.style.fontSize = '30pt';
+                cell.style.color = '#888';
+                cell.colSpan = 1;
+                return;
+            }
+
+            // Title row
+            if (titleText.value.trim()) {
+                const row = previewTable.insertRow();
+                row.className = 'title-row';
+                const cell = row.insertCell();
+                cell.colSpan = panels.length;
+                cell.textContent = titleText.value.trim();
+                cell.style.fontFamily = getSelectedFont(titleFontRadios);
+                cell.style.fontSize = titleSize.value + 'pt';
+            }
+
+            // Panels row
+            const panelRow = previewTable.insertRow();
+            panels.forEach(img => {
+                const cell = panelRow.insertCell();
+                const clonedImg = img.cloneNode();
+                clonedImg.style.border = `${borderWidth}px solid ${borderColor.value}`;
+                clonedImg.style.boxSizing = 'border-box';
+                cell.appendChild(clonedImg);
+            });
+
+            // Footer row
+            const hasFooter = authorText.value.trim() || (dateToggleYes.checked && datePicker.value);
+            if (hasFooter) {
+                const row = previewTable.insertRow();
+                row.className = 'footer-row';
+                const cell = row.insertCell();
+                cell.colSpan = panels.length;
+
+                const footerDiv = document.createElement('div');
+                footerDiv.className = 'footer-content';
+
+                const authorDiv = document.createElement('div');
+                authorDiv.className = 'footer-author';
+
+                if (authorText.value.trim()) {
+                    authorDiv.textContent = authorText.value.trim();
+                    authorDiv.style.fontFamily = getSelectedFont(authorFontRadios);
+                    authorDiv.style.fontSize = authorSize.value + 'pt';
+                    footerDiv.appendChild(authorDiv);
+                }
+
+                if (dateToggleYes.checked && datePicker.value) {
+                    // Fixed date parsing – treat YYYY-MM-DD as local date (no timezone shift)
+                    const [y, m, d] = datePicker.value.split('-').map(Number);
+                    const date = new Date(y, m - 1, d);
+                    const dateStr = date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric' 
+                    });
+
+                    const dateDiv = document.createElement('div');
+                    dateDiv.className = 'footer-date';
+                    dateDiv.textContent = dateStr;
+                    dateDiv.style.fontFamily = getSelectedFont(authorFontRadios);
+                    dateDiv.style.fontSize = authorSize.value + 'pt';
+                    footerDiv.appendChild(dateDiv);
+                }
+
+                cell.appendChild(footerDiv);
+            }
+
+            updateCSSVars();
+        }
+
+        function getSelectedFont(radios) {
+            for (let r of radios) if (r.checked) return r.value;
+            return 'Oswald';
+        }
+
+        function addPanels(files) {
+            if (panels.length + files.length > 8) {
+                alert(`Max 8 panels. Adding only ${8 - panels.length}.`);
+                files = Array.from(files).slice(0, 8 - panels.length);
+            }
+
+            Array.from(files).forEach(file => {
+                if (!file.type.match('image/png')) return;
+                const img = new Image();
+                img.src = URL.createObjectURL(file);
+                img.onload = () => {
+                    panels.push(img);
+                    renderThumbnails();
+                    updatePreview();
+                };
+            });
+        }
+
+        function renderThumbnails() {
+            thumbnails.innerHTML = '';
+            panels.forEach((img, i) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'thumb-wrapper';
+                wrapper.draggable = true;
+
+                const grip = document.createElement('div');
+                grip.className = 'thumb-grip';
+                grip.textContent = '⋮⋮';
+                wrapper.appendChild(grip);
+
+                const thumb = document.createElement('img');
+                thumb.src = img.src;
+                wrapper.appendChild(thumb);
+
+                const remove = document.createElement('div');
+                remove.className = 'thumb-remove';
+                remove.textContent = '×';
+                remove.onclick = (e) => {
+                    e.stopPropagation();
+                    URL.revokeObjectURL(img.src);
+                    panels.splice(i, 1);
+                    renderThumbnails();
+                    updatePreview();
+                };
+                wrapper.appendChild(remove);
+
+                wrapper.ondragstart = (e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', i);
+                };
+
+                thumbnails.appendChild(wrapper);
+            });
+        }
+
+        // File drop only on drop-zone
+        dropZone.ondragover = e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        };
+        dropZone.ondrop = e => {
+            e.preventDefault();
+            addPanels(e.dataTransfer.files);
+        };
+
+        // Reordering via container-level drop
+        thumbnails.ondragover = e => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        };
+
+        thumbnails.ondrop = e => {
+            e.preventDefault();
+            const fromStr = e.dataTransfer.getData('text/plain');
+            if (!fromStr) return;
+            const from = parseInt(fromStr, 10);
+            if (isNaN(from)) return;
+
+            const wrappers = thumbnails.querySelectorAll('.thumb-wrapper');
+            let insertIndex = wrappers.length;
+
+            for (let i = 0; i < wrappers.length; i++) {
+                const rect = wrappers[i].getBoundingClientRect();
+                if (e.clientX < rect.left + rect.width / 2) {
+                    insertIndex = i;
+                    break;
+                }
+            }
+
+            let to = insertIndex;
+            if (from < to) to--;
+
+            if (from === to) return;
+
+            const [moved] = panels.splice(from, 1);
+            panels.splice(to, 0, moved);
+            renderThumbnails();
+            updatePreview();
+        };
+
+        addBtn.onclick = () => fileInput.click();
+        fileInput.onchange = e => addPanels(e.target.files);
+
+        clearBtn.onclick = () => {
+            panels.forEach(img => URL.revokeObjectURL(img.src));
+            panels.length = 0;
+            renderThumbnails();
+            updatePreview();
+        };
+
+        // Live updates
+        gutterRadios.forEach(r => r.addEventListener('change', () => {
+            if (r.id === 'gutter-custom-radio') gutterCustom.focus();
+            gutterWidth = r.value === 'custom' ? parseInt(gutterCustom.value) || 20 : parseInt(r.value);
+            updatePreview();
+        }));
+        gutterCustom.addEventListener('focus', () => gutterCustomRadio.checked = true);
+        gutterCustom.addEventListener('blur', () => {
+            gutterWidth = Math.max(0, Math.min(60, parseInt(gutterCustom.value) || 20));
+            gutterCustom.value = gutterWidth;
+            updatePreview();
+        });
+        gutterColor.addEventListener('input', updatePreview);
+
+        borderRadios.forEach(r => r.addEventListener('change', () => {
+            if (r.id === 'border-custom-radio') borderCustom.focus();
+            borderWidth = r.value === 'custom' ? parseInt(borderCustom.value) || 1 : parseInt(r.value);
+            updatePreview();
+        }));
+        borderCustom.addEventListener('focus', () => borderCustomRadio.checked = true);
+        borderCustom.addEventListener('blur', () => {
+            borderWidth = Math.max(0, Math.min(10, parseInt(borderCustom.value) || 1));
+            borderCustom.value = borderWidth;
+            updatePreview();
+        });
+        borderColor.addEventListener('input', updatePreview);
+
+        titleText.addEventListener('input', updatePreview);
+        titleFontRadios.forEach(r => r.addEventListener('change', updatePreview));
+        titleSize.addEventListener('input', updatePreview);
+
+        authorText.addEventListener('input', updatePreview);
+        authorFontRadios.forEach(r => r.addEventListener('change', updatePreview));
+        authorSize.addEventListener('input', updatePreview);
+
+        document.querySelectorAll('input[name="date-toggle"]').forEach(el => el.addEventListener('change', updatePreview));
+        datePicker.addEventListener('change', updatePreview);
+
+        exportBtn.onclick = () => {
+            if (panels.length === 0) return alert('Add panels first');
+
+            const originalMax = previewWrapper.style.maxHeight;
+            previewWrapper.style.maxHeight = 'none';
+
+            html2canvas(previewWrapper, {scale: 2, useCORS: true}).then(canvas => {
+                previewWrapper.style.maxHeight = originalMax;
+
+                const link = document.createElement('a');
+                let author = (authorText.value || 'author').trim().replace(/[^a-z0-9]/gi, '_');
+                let title = (titleText.value || 'untitled').trim().replace(/[^a-z0-9]/gi, '_');
+                const dateStr = new Date().toISOString().slice(0,10);
+                link.download = `${dateStr}_${author}-${title}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        };
+
+        // Initial setup – set date picker to today (local date)
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        datePicker.value = `${yyyy}-${mm}-${dd}`;
+
+        updatePreview();
+
+        // Responsive max-height handling
+        function updatePreviewHeight() {
+            previewWrapper.style.maxHeight = window.innerWidth <= 900 ? '256px' : '512px';
+        }
+        window.addEventListener('resize', updatePreviewHeight);
+        updatePreviewHeight(); // initial call
+    </script>
+
+</body>
+</html>
